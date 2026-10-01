@@ -1,0 +1,3 @@
+{ "expo": { "name": "NOW", "slug": "now-app", "version": "0.4.0", "orientation": "portrait",
+  "userInterfaceStyle": "dark", "ios": { "bundleIdentifier": "app.now.dating", "supportsTablet": false },
+  "android": { "package": "app.now.dating" }, "scheme": "now" } }
