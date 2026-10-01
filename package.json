@@ -2,7 +2,13 @@
   "name": "now-app",
   "version": "0.4.0",
   "main": "node_modules/expo/AppEntry.js",
-  "scripts": { "start": "expo start", "ios": "expo start --ios", "android": "expo start --android" },
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "build:web": "expo export --platform web"
+  },
   "dependencies": {
     "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "1.23.1",
@@ -11,9 +17,13 @@
     "expo-linear-gradient": "~14.0.1",
     "expo-status-bar": "~2.0.0",
     "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-native": "0.76.5",
+    "react-native-web": "~0.19.13",
     "react-native-url-polyfill": "^2.0.0"
   },
-  "devDependencies": { "@babel/core": "^7.25.0" },
+  "devDependencies": {
+    "@babel/core": "^7.25.0"
+  },
   "private": true
 }
