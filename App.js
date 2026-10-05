@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, TouchableOpacity as T, ScrollView, TextInput, SafeAreaView, FlatList, Switch, Share, Alert } from 'react-native';
+import { View, Text, TouchableOpacity as T, ScrollView, TextInput, SafeAreaView, FlatList, Switch, Share, Alert, Image, ImageBackground, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons as I } from '@expo/vector-icons';
 import { C } from './src/theme';
@@ -21,9 +21,9 @@ const Chip = ({ t, on, onPress }) => (
     <Text style={{ color: on ? C.onSalmon : C.text, fontWeight: '600' }}>{t}</Text>
   </T>
 );
-const Avatar = ({ name, size = 48 }) => (
-  <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: hue(name), alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.light }}>
-    <Text style={{ color: C.onSalmon, fontWeight: '800', fontSize: size / 2.4 }}>{name[0]}</Text>
+const Avatar = ({ name, img, size = 48 }) => (
+  <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: hue(name), alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.light, overflow: 'hidden' }}>
+    {img ? <Image source={img} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Text style={{ color: C.onSalmon, fontWeight: '800', fontSize: size / 2.4 }}>{name[0]}</Text>}
   </View>
 );
 const H = ({ children }) => <Text style={{ color: C.text, fontSize: 28, fontWeight: '800', marginBottom: 6 }}>{children}</Text>;
@@ -48,8 +48,11 @@ const Nav = () => {
   );
 };
 const Wrap = ({ children, nav }) => (
-  <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}><StatusBar style="light" />
-    <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 30 }}>{children}</View>{nav && <Nav />}
+  <SafeAreaView style={{ flex: 1, backgroundColor: '#070708' }}><StatusBar style="light" />
+    <View style={{ flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center', backgroundColor: C.bg, borderLeftWidth: Platform.OS === 'web' ? 1 : 0, borderRightWidth: Platform.OS === 'web' ? 1 : 0, borderColor: C.line, boxShadow: Platform.OS === 'web' ? '0 0 70px rgba(0,0,0,.55)' : undefined }}>
+      <View style={{ flex: 1, paddingHorizontal: 18, paddingTop: Platform.OS === 'web' ? 18 : 10 }}>{children}</View>
+      {nav && <Nav />}
+    </View>
   </SafeAreaView>);
 
 export default function App() {
@@ -143,7 +146,7 @@ function Inner() {
     <Wrap><View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       <Text style={{ color: C.text, fontSize: 36, fontWeight: '900' }}>It's a Match!</Text>
       <P style={{ textAlign: 'center', marginVertical: 12, color: C.text }}>Du und {s.peer.name} seid beide frei – {s.peer.date === iso(0) ? 'heute' : s.peer.date} {s.peer.start}–{s.peer.end} in {s.peer.city}.</P>
-      <View style={{ flexDirection: 'row' }}><Avatar name="Du" size={100} /><View style={{ width: 16 }} /><Avatar name={s.peer.name} size={100} /></View></View>
+      <View style={{ flexDirection: 'row' }}><Avatar name="Du" size={100} /><View style={{ width: 16 }} /><Avatar name={s.peer.name} img={s.peer.img} size={100} /></View></View>
       <Btn t="Open Chat" onPress={() => set({ screen: 'chat' })} /><Btn t="Keep Swiping" kind="ghost" onPress={() => set({ screen: 'main', tab: 'discover' })} />
     </Wrap>);
 
@@ -182,8 +185,9 @@ function Inner() {
   // PROFIL-DETAIL
   if (sc === 'detail') { const p = s.peer; return (
     <Wrap><Top title={`${p.name}, ${p.age}`} back={() => set({ screen: 'main' })} />
-      <View style={{ alignItems: 'center', marginVertical: 20 }}><Avatar name={p.name} size={140} /></View>
-      <P style={{ color: C.text }}>{p.city} · {p.dist} km · frei {p.start}–{p.end}</P><P style={{ marginTop: 10, color: C.text }}>{p.bio}</P>
+      <ImageBackground source={p.img} style={{ height: 360, marginHorizontal: -18, justifyContent: 'flex-end' }} resizeMode="cover"><LinearGradient colors={['transparent','rgba(13,13,15,.94)']} style={{ position:'absolute',left:0,right:0,top:0,bottom:0 }}/><View style={{ padding:18 }}><Text style={{ color:'#fff',fontSize:30,fontWeight:'900' }}>{p.name}, {p.age}</Text><Text style={{ color:'#F3ECEA',marginTop:4 }}>{p.city} · {p.dist} km</Text></View></ImageBackground>
+      <View style={{ marginTop:18, backgroundColor:C.card, borderRadius:18, padding:16 }}><Text style={{ color:C.text,fontWeight:'800',fontSize:16 }}>About</Text><P style={{ marginTop:8, color: C.text }}>{p.bio}</P></View>
+      <View style={{ marginTop:12, backgroundColor:C.card, borderRadius:18, padding:16 }}><Text style={{ color:C.text,fontWeight:'800',fontSize:16 }}>Availability</Text><P style={{ marginTop:8, color:C.salmon }}>Frei {p.start}–{p.end}</P></View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{p.vibes.map((v) => <Chip key={v} t={v} />)}</View></Wrap>); }
 
   // MAIN TABS
@@ -197,15 +201,23 @@ function Inner() {
           <I name="lock-closed" size={44} color={C.salmon} style={{ alignSelf: 'center' }} />
           <H>Erst Verfügbarkeit.</H><P>Ohne aktiven Slot gibt es keine Profile, kein Swipen und keine neuen Matches. Deine Chats bleiben offen.</P>
           <Btn t="Add availability" onPress={() => set({ screen: 'editSlot', edit: { id: 'n' + Date.now(), city: 'Zürich', date: iso(0), start: '20:00', end: '24:00', active: true } })} /></View>
-        ) : deck.length === 0 ? (<View style={{ flex: 1, justifyContent: 'center' }}><H>Gerade niemand mehr.</H><P>Erweitere Zeitfenster, Distanz oder füge einen weiteren Slot hinzu.</P></View>
+        ) : deck.length === 0 ? (<View style={{ flex: 1, justifyContent: 'center' }}><H>Für diesen Slot gerade keine neuen Profile.</H><P>Du hast das Demo-Deck durchgesehen. Setze es zurück oder ändere Zeitfenster und Filter.</P><Btn t="Demo-Profile erneut anzeigen" onPress={() => set({ seen: [] })} /><Btn t="Availability ändern" kind="ghost" onPress={() => go('slots')} /></View>
         ) : (() => { const p = deck[0]; return (<View style={{ flex: 1 }}>
-          <T activeOpacity={0.9} onPress={() => set({ peer: p, screen: 'detail' })} style={{ flex: 1, backgroundColor: hue(p.name), borderRadius: 28, overflow: 'hidden', marginTop: 10, justifyContent: 'flex-end', padding: 20 }}>
-            <Text style={{ position: 'absolute', alignSelf: 'center', top: '22%', fontSize: 150, fontWeight: '900', color: 'rgba(255,255,255,0.18)' }}>{p.name[0]}</Text>
-            <LinearGradient colors={['transparent', 'rgba(13,13,15,0.92)']} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }} />
-            <Text style={{ color: '#fff', fontSize: 30, fontWeight: '800' }}>{p.name}, {p.age} {p.verified && '✔'}</Text>
-            <Text style={{ color: '#fff' }}>{p.dist != null ? p.dist + ' km · ' : ''}{p.city}</Text>
-            <Text style={{ alignSelf: 'flex-start', backgroundColor: '#3A211D', color: C.salmon, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, overflow: 'hidden', fontWeight: '800', marginTop: 8 }}>Frei {p.date === iso(0) ? 'heute' : p.date} {p.start}–{p.end} · {Math.round(p.ov / 60 * 10) / 10} h Überschneidung</Text>
-            <Text style={{ color: '#fff', marginTop: 4 }}>{p.single ? 'Single' : 'Paar'} · {p.vibes.join(' · ')}</Text></T>
+          <T activeOpacity={0.9} onPress={() => set({ peer: p, screen: 'detail' })} style={{ flex: 1, borderRadius: 28, overflow: 'hidden', marginTop: 10, minHeight: 470, borderWidth: 1, borderColor: C.line }}>
+            <ImageBackground source={p.img} style={{ flex: 1, justifyContent: 'flex-end' }} resizeMode="cover">
+              <LinearGradient colors={['transparent', 'rgba(13,13,15,0.18)', 'rgba(13,13,15,0.96)']} style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }} />
+              <View style={{ position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' }}>
+                <View style={{ backgroundColor: 'rgba(20,20,22,.72)', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 99 }}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>● Online now</Text></View>
+                <View style={{ backgroundColor: 'rgba(20,20,22,.72)', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 99 }}><Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>⌖ {p.dist} km</Text></View>
+              </View>
+              <View style={{ padding: 20 }}>
+                <Text style={{ color: '#fff', fontSize: 31, fontWeight: '900' }}>{p.name}, {p.age} {p.verified && '✓'}</Text>
+                <Text style={{ color: '#F3ECEA', marginTop: 4 }}>{p.city} · {p.single ? 'Single' : 'Paar'}</Text>
+                <View style={{ alignSelf: 'flex-start', backgroundColor: C.salmon, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, marginTop: 10 }}><Text style={{ color: C.onSalmon, fontWeight: '900' }}>◷ Frei {p.date === iso(0) ? 'heute' : p.date} {p.start}–{p.end}</Text></View>
+                <Text style={{ color: '#fff', marginTop: 10, fontSize: 14 }}>{p.vibes.join(' · ')}</Text>
+              </View>
+            </ImageBackground>
+          </T>
           <View style={{ flexDirection: 'row', justifyContent: 'space-evenly', paddingVertical: 14 }}>
             <Round ic="close" onPress={() => swipe(false, p)} /><Round ic="star" onPress={() => set({ fav: [...s.fav, p.id] }) || swipe(true, p)} /><Round ic="heart" big onPress={() => swipe(true, p)} /></View></View>); })()}
       </>)}
@@ -224,7 +236,7 @@ function Inner() {
 
 const inp = { backgroundColor: C.card, color: C.text, borderRadius: 12, padding: 14, marginTop: 8, fontSize: 16 };
 const Round = ({ ic, onPress, big }) => (<T onPress={onPress} style={{ width: big ? 72 : 58, height: big ? 72 : 58, borderRadius: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: big ? C.salmon : C.card2, borderWidth: 1.5, borderColor: C.strong }}><I name={ic} size={28} color={big ? C.onSalmon : C.salmon} /></T>);
-const Row = ({ p, sub, onPress, star }) => (<T onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}><Avatar name={p.name} /><View style={{ marginLeft: 12, flex: 1 }}><Text style={{ color: C.text, fontWeight: '700' }}>{p.name}, {p.age}</Text><P numberOfLines={1}>{sub}</P></View>{star && <I name="star" size={20} color={C.salmon} />}</T>);
+const Row = ({ p, sub, onPress, star }) => (<T onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12 }}><Avatar name={p.name} img={p.img} /><View style={{ marginLeft: 12, flex: 1 }}><Text style={{ color: C.text, fontWeight: '700' }}>{p.name}, {p.age}</Text><P numberOfLines={1}>{sub}</P></View>{star && <I name="star" size={20} color={C.salmon} />}</T>);
 
 function ChatView({ s, set, msgs, Wrap }) {
   const [t, setT] = useState(''); const [rm, setRm] = useState([]); const [cx, setCx] = useState(null); const id = s.peer.id;

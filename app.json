@@ -1,3 +1,17 @@
-{ "expo": { "name": "NOW", "slug": "now-app", "version": "0.4.0", "orientation": "portrait",
-  "userInterfaceStyle": "dark", "ios": { "bundleIdentifier": "app.now.dating", "supportsTablet": false },
-  "android": { "package": "app.now.dating" }, "scheme": "now" } }
+{
+  "expo": {
+    "name": "NOW App 0.4.1",
+    "slug": "now-app-0-4-1",
+    "version": "0.4.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "app.now.dating",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "app.now.dating"
+    },
+    "scheme": "now"
+  }
+}
