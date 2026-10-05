@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "NOW App 0.4.1",
-    "slug": "now-app-0-4-1",
-    "version": "0.4.1",
+    "name": "NOW App",
+    "slug": "now-app",
+    "version": "0.5.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
@@ -12,6 +12,10 @@
     "android": {
       "package": "app.now.dating"
     },
-    "scheme": "now"
+    "scheme": "now",
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
   }
 }

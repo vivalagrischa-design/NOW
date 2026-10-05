@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: now-app
+    runtime: static
+    buildCommand: npm install && npm run build:web
+    staticPublishPath: ./dist
