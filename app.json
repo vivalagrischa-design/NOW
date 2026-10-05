@@ -1,21 +1,28 @@
 {
   "expo": {
-    "name": "NOW App",
-    "slug": "now-app",
-    "version": "0.5.0",
+    "name": "NOW App 0.7.1 Beta",
+    "slug": "now-beta",
+    "version": "0.7.1",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "ios": {
       "bundleIdentifier": "app.now.dating",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "buildNumber": "1"
     },
     "android": {
-      "package": "app.now.dating"
+      "package": "app.now.dating",
+      "versionCode": 1
     },
     "scheme": "now",
     "web": {
       "bundler": "metro",
       "output": "single"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
     }
   }
 }

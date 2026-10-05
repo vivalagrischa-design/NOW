@@ -1,6 +1,6 @@
 {
   "name": "now-app",
-  "version": "0.5.0",
+  "version": "0.7.1",
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -8,7 +8,10 @@
     "ios": "expo start --ios",
     "android": "expo start --android",
     "web": "expo start --web",
-    "build:web": "expo export -p web"
+    "build:web": "expo export -p web",
+    "native:setup": "bash setup-native.sh",
+    "beta:ios": "eas build --profile development --platform ios",
+    "beta:android": "eas build --profile development --platform android"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.0",
