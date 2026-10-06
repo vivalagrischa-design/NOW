@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   SafeAreaView, View, Text, TouchableOpacity, ScrollView, TextInput,
-  Image, ImageBackground, Platform, StatusBar, Switch, Share, Alert, StyleSheet
+  Image, ImageBackground, Platform, StatusBar, Switch, Share, Alert, StyleSheet, Linking
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,19 +106,26 @@ function SectionTitle({children}) {
   return <Text style={{color:C.text,fontSize:19,fontWeight:'900',marginTop:22,marginBottom:12}}>{children}</Text>;
 }
 
-function Auth({enter,live,onLogin,onSignup,onOAuth,onPhone}) {
+function Auth({enter,live,onLogin,onSignup,onOAuth,onPhone,referralCode}) {
   const [mode,setMode]=useState('login');
   const [email,setEmail]=useState('');
   const [password,setPassword]=useState('');
   const [name,setName]=useState('');
   const [birth,setBirth]=useState('1990-01-01');
   const [busy,setBusy]=useState(false);
+  const [adultConfirmed,setAdultConfirmed]=useState(false);
   const submit=async()=>{
     if(!live){enter();return;}
     try{
       setBusy(true);
       if(mode==='login') await onLogin(email,password);
-      else await onSignup({email,password,displayName:name,birthDate:birth});
+      else {
+        const dob=new Date(`${birth}T12:00:00`);
+        const cutoff=new Date(); cutoff.setFullYear(cutoff.getFullYear()-18);
+        if(!birth || Number.isNaN(dob.getTime()) || dob>cutoff) throw new Error('NOW is only for adults aged 18 or older.');
+        if(!adultConfirmed) throw new Error('Please confirm that you are 18 or older.');
+        await onSignup({email,password,displayName:name,birthDate:birth,referralCode});
+      }
     }catch(e){Alert.alert('NOW',e.message||String(e));}
     finally{setBusy(false);}
   };
@@ -151,8 +158,10 @@ function Auth({enter,live,onLogin,onSignup,onOAuth,onPhone}) {
       </ImageBackground>
 
       {mode==='signup' && <>
+        {referralCode ? <View style={{padding:10,borderRadius:12,backgroundColor:C.salmonSoft,borderWidth:1,borderColor:C.salmon,marginBottom:2}}><Text style={{color:C.salmonPale,fontWeight:'800',fontSize:12}}>Friend invite detected · your referral reward will be linked after signup.</Text></View> : null}
         <TextInput value={name} onChangeText={setName} placeholder="Display name" placeholderTextColor={C.muted} style={authInput}/>
         <TextInput value={birth} onChangeText={setBirth} placeholder="Birth date (YYYY-MM-DD)" placeholderTextColor={C.muted} style={authInput}/>
+        <TouchableOpacity onPress={()=>setAdultConfirmed(!adultConfirmed)} style={{flexDirection:'row',alignItems:'center',paddingVertical:10}}><Ionicons name={adultConfirmed?'checkbox':'square-outline'} size={22} color={adultConfirmed?C.salmon:C.muted}/><Text style={{color:C.text,marginLeft:9,flex:1,fontSize:12,lineHeight:17}}>I confirm that I am 18 or older and that my date of birth is correct.</Text></TouchableOpacity>
       </>}
       <View style={{flexDirection:'row'}}>
         <TextInput
@@ -321,7 +330,7 @@ function Slots({slots,setSlots,premium,add,edit,back}) {
   </ScrollView></Shell>;
 }
 
-function Discover({slots,seen,setSeen,favs,setFavs,matches,setMatches,chats,setChats,openProfile,openMatch,filters,setScreen,people}) {
+function Discover({slots,seen,setSeen,favs,setFavs,matches,setMatches,chats,setChats,openProfile,openMatch,filters,setScreen,people,shareProfile}) {
   const active=slots.some(s=>s.active);
   const source=(people&&people.length)?people:PEOPLE;
   const deck=source.filter(p=>!seen.includes(p.id) && (p.dist||0)<=filters.dist);
@@ -338,8 +347,8 @@ function Discover({slots,seen,setSeen,favs,setFavs,matches,setMatches,chats,setC
   if(!p) return <Shell tab="discover" setTab={(t)=>setScreen(t)}>
     <View style={{flex:1,alignItems:'center',justifyContent:'center',padding:28}}>
       <Text style={{color:C.text,fontSize:27,fontWeight:'900'}}>That’s everyone for now.</Text>
-      <Text style={{color:C.muted,textAlign:'center',marginTop:8}}>Change filters or reset the demo deck.</Text>
-      <View style={{width:'100%'}}><Btn onPress={()=>setSeen([])}>Reset demo profiles</Btn></View>
+      <Text style={{color:C.muted,textAlign:'center',marginTop:8,lineHeight:21}}>Invite someone to NOW. More people nearby means more real possibilities for everyone.</Text>
+      <View style={{width:'100%'}}><Btn onPress={()=>setScreen('referral')}>Invite & earn credits</Btn><Btn kind="ghost" onPress={()=>setSeen([])}>Reset demo profiles</Btn></View>
     </View>
   </Shell>;
 
@@ -388,6 +397,7 @@ function Discover({slots,seen,setSeen,favs,setFavs,matches,setMatches,chats,setC
           <TouchableOpacity onPress={skip} style={circleAction}><Ionicons name="close" size={31} color={C.text}/></TouchableOpacity>
           <TouchableOpacity onPress={()=>setFavs(favs.includes(p.id)?favs.filter(x=>x!==p.id):[...favs,p.id])} style={circleAction}><Ionicons name={favs.includes(p.id)?'star':'star-outline'} size={26} color={favs.includes(p.id)?C.gold:C.text}/></TouchableOpacity>
           <TouchableOpacity onPress={like} style={likeAction}><Ionicons name="heart" size={31} color="#2A1210"/></TouchableOpacity>
+          <TouchableOpacity onPress={()=>shareProfile(p)} style={circleAction}><Ionicons name="share-social-outline" size={25} color={C.salmonPale}/></TouchableOpacity>
           <TouchableOpacity onPress={()=>openProfile(p)} style={circleAction}><Ionicons name="information" size={26} color={C.text}/></TouchableOpacity>
         </View>
       </View>
@@ -395,7 +405,7 @@ function Discover({slots,seen,setSeen,favs,setFavs,matches,setMatches,chats,setC
   </Shell>;
 }
 
-function Profile({person,back,like}) {
+function Profile({person,back,like,shareProfile}) {
   return <Shell noNav>
     <ScrollView>
       <ImageBackground source={person.img||IMG.lena} style={{height:470,justifyContent:'flex-end'}}>
@@ -418,6 +428,8 @@ function Profile({person,back,like}) {
           <Text style={{color:C.green,marginTop:6,fontWeight:'800'}}>● Overlaps with your active slot</Text>
         </View>
         <Btn onPress={like}>Like</Btn>
+        <Btn kind="ghost" onPress={()=>shareProfile(person)}>↗ Someone for your friend? Share profile</Btn>
+        <Text style={{color:C.muted,fontSize:11,textAlign:'center',marginTop:4}}>Sharing is caring. Your friend joins NOW to see the profile.</Text>
         <View style={{flexDirection:'row',marginTop:8}}>
           <Btn kind="ghost" style={{flex:1,marginRight:5}} onPress={async()=>{try{if(backend.isLive)await backend.reportUser(person.id,'user_report');Alert.alert('Report','Thanks. The report has been recorded.');}catch(e){Alert.alert('Report',e.message||String(e));}}}>Report</Btn>
           <Btn kind="ghost" style={{flex:1,marginLeft:5}} onPress={async()=>{try{if(backend.isLive)await backend.blockUser(person.id);Alert.alert('Blocked','This profile will no longer be shown.');back();}catch(e){Alert.alert('Block',e.message||String(e));}}}>Block</Btn>
@@ -607,13 +619,13 @@ function Referral({credits,setCredits,back}) {
   const share=async()=>{await Share.share({message:`Join me on NOW: ${link}`});}
   return <Shell noNav><ScrollView contentContainerStyle={{padding:20,paddingBottom:40}}>
     <Top title="Invite & earn" back={back}/>
-    <Text style={{color:C.text,fontSize:30,fontWeight:'900'}}>Share NOW. Both get credits.</Text>
+    <Text style={{color:C.text,fontSize:30,fontWeight:'900'}}>Invite. Share. Earn.</Text>
     <Text style={{color:C.muted,lineHeight:21,marginTop:8}}>A share alone gives nothing. The invited person must create a new account through your referral link.</Text>
     <View style={{marginTop:22,padding:17,borderRadius:17,backgroundColor:C.panel,borderWidth:1,borderColor:C.line}}>
       <Text style={{color:C.muted,fontSize:10,letterSpacing:1}}>YOUR REFERRAL LINK</Text>
       <Text style={{color:C.text,fontWeight:'900',marginTop:7}}>{link}</Text>
     </View>
-    <Btn onPress={share}>Share invite link</Btn>
+    <Btn onPress={share}>Share NOW · both get +3 credits</Btn>
     <View style={{marginTop:18,padding:16,borderRadius:16,backgroundColor:C.salmonSoft,borderWidth:1,borderColor:C.salmon}}>
       <Text style={{color:C.salmonPale,fontWeight:'900'}}>Anti-abuse</Text>
       <Text style={{color:'#F3E5E1',lineHeight:20,marginTop:5}}>Reward only after a real new registration. One reward per new person; reward handling lives server-side in Supabase.</Text>
@@ -704,6 +716,7 @@ export default function App(){
   const [livePeople,setLivePeople]=useState([]);
   const [matchPeople,setMatchPeople]=useState([]);
   const [booted,setBooted]=useState(false);
+  const [referralCode,setReferralCode]=useState(null);
 
   const nav=(t)=>{setTab(t);setScreen(t)};
   const begin=()=>setScreen('intent');
@@ -726,6 +739,12 @@ export default function App(){
   };
   useEffect(()=>{hydrateLive();},[]);
   useEffect(()=>{
+    const capture=(url)=>{try{if(!url)return;const m=url.match(/[?&]ref=([^&#]+)/)||url.match(/\/invite\/([^/?#]+)/);if(m)setReferralCode(decodeURIComponent(m[1]));}catch(_){}};
+    Linking.getInitialURL().then(capture).catch(()=>{});
+    const sub=Linking.addEventListener('url',({url})=>capture(url));
+    return ()=>sub?.remove?.();
+  },[]);
+  useEffect(()=>{
     if(backend.isLive && slots.some(x=>x.active)){
       backend.discover(filters.dist).then(setLivePeople).catch(()=>setLivePeople([]));
     }
@@ -744,7 +763,11 @@ export default function App(){
   };
   const onSignup=async(payload)=>{
     await backend.signUpEmail(payload);
-    Alert.alert('Account created','If email confirmation is enabled, confirm the email first.');
+    if(payload.referralCode){
+      const session=await backend.currentSession().catch(()=>null);
+      if(session) await backend.redeemReferral(payload.referralCode).catch(()=>{});
+    }
+    Alert.alert('Account created',payload.referralCode?'Welcome to NOW. Your friend invite is linked; rewards are granted after a valid new registration.':'If email confirmation is enabled, confirm the email first.');
     setScreen('intent');
   };
   const onOAuth=async(provider)=>{
@@ -769,6 +792,14 @@ export default function App(){
       setScreen('discover'); setTab('discover');
     }catch(e){Alert.alert('Availability',e.message||String(e));}
   };
+  const shareProfile=async(p)=>{
+    try{
+      let code='DEMO42';
+      if(backend.isLive) code=await backend.createReferralCode();
+      const link=`https://now.app/p/${p.id}?ref=${encodeURIComponent(code)}`;
+      await Share.share({message:`Someone for you? 👀 ${p.name}, ${p.age} is on NOW. Join to see the profile: ${link}`});
+    }catch(e){Alert.alert('Share',e.message||String(e));}
+  };
   const openProfile=(p)=>{setPeer(p);setScreen('person')};
   const openMatch=(p)=>{setPeer(p);setScreen('match')};
   const likePeer=async()=>{
@@ -782,12 +813,12 @@ export default function App(){
   const openChat=(p)=>{const m=matchPeople.find(x=>x.id===p?.id);setPeer(m||p);setScreen('chat')};
 
   if(!booted && backend.isLive) return <Shell noNav><View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Text style={{color:C.salmon,fontSize:34,fontWeight:'900'}}>NOW</Text><Text style={{color:C.muted,marginTop:10}}>Connecting…</Text></View></Shell>;
-  if(screen==='auth') return <Auth live={backend.isLive} enter={begin} onLogin={onLogin} onSignup={onSignup} onOAuth={onOAuth} onPhone={onPhone}/>;
+  if(screen==='auth') return <Auth live={backend.isLive} enter={begin} onLogin={onLogin} onSignup={onSignup} onOAuth={onOAuth} onPhone={onPhone} referralCode={referralCode}/>;
   if(screen==='phoneAuth') return <PhoneAuth back={()=>setScreen('auth')} onDone={async()=>{const b=await backend.loadBootstrap();setSlots(b.slots||[]);setPremium(!!b.premium);setCredits(b.credits||0);setScreen((b.slots||[]).some(x=>x.active)?'discover':'intent')}}/>;
   if(screen==='intent') return <IntentScreen selected={selected} setSelected={setSelected} next={async()=>{try{if(backend.isLive)await backend.saveIntents(selected);newSlot();}catch(e){Alert.alert('Intent',e.message||String(e));}}}/>;
   if(screen==='slotEdit') return <SlotEditor slot={editing} setSlot={setEditing} save={saveSlot} cancel={()=>setScreen(slots.length?'slots':'intent')}/>;
   if(screen==='slots') return <Slots slots={slots} setSlots={setSlots} premium={premium} add={newSlot} edit={(s)=>{setEditing(s);setScreen('slotEdit')}} back={()=>setScreen('discover')}/>;
-  if(screen==='person') return <Profile person={peer} back={()=>setScreen('discover')} like={likePeer}/>;
+  if(screen==='person') return <Profile person={peer} back={()=>setScreen('discover')} like={likePeer} shareProfile={shareProfile}/>;
   if(screen==='match') return <MatchPopup person={peer} openChat={()=>openChat(peer)} close={()=>setScreen('discover')}/>;
   if(screen==='chat') return <Chat person={peer} back={()=>setScreen('chats')} premium={premium}/>;
   if(screen==='filters') return <Filters filters={filters} setFilters={setFilters} premium={premium} back={()=>setScreen('discover')}/>;
@@ -797,7 +828,7 @@ export default function App(){
   if(screen==='chats') return <Chats chats={chats} setScreen={nav} openChat={openChat}/>;
   if(screen.startsWith('legal:')) return <LegalScreen kind={screen.split(':')[1]} back={()=>setScreen('profile')}/>;
   if(screen==='profile') return <Me premium={premium} credits={credits} slots={slots} setScreen={setScreen} onSignOut={async()=>{if(backend.isLive)await backend.signOut();setSlots([]);setMatches([]);setChats([]);setScreen('auth')}}/>;
-  return <Discover slots={slots} seen={seen} setSeen={setSeen} favs={favs} setFavs={setFavs} matches={matches} setMatches={setMatches} chats={chats} setChats={setChats} openProfile={openProfile} openMatch={openMatch} filters={filters} setScreen={nav} people={backend.isLive?livePeople:PEOPLE}/>;
+  return <Discover slots={slots} seen={seen} setSeen={setSeen} favs={favs} setFavs={setFavs} matches={matches} setMatches={setMatches} chats={chats} setChats={setChats} openProfile={openProfile} openMatch={openMatch} filters={filters} setScreen={nav} people={backend.isLive?livePeople:PEOPLE} shareProfile={shareProfile}/>;
 }
 
 const authInput = {
